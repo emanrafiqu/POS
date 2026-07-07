@@ -1,0 +1,173 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return userDoc().data.role;
+    }
+
+    function isActive() {
+      return userDoc().data.status == 'active';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && isActive() && role() == 'admin';
+    }
+
+    function isManager() {
+      return isSignedIn() && isActive() && (role() == 'admin' || role() == 'manager');
+    }
+
+    function isStaff() {
+      return isSignedIn() && isActive()
+        && (role() == 'admin' || role() == 'manager' || role() == 'cashier');
+    }
+
+    // ---------- Users ----------
+    match /users/{userId} {
+      allow read: if isStaff();
+      allow create: if isAdmin();
+      // Users can update their own non-privileged fields; admins can update anyone
+      allow update: if isAdmin()
+        || (isSignedIn() && request.auth.uid == userId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Catalog ----------
+    match /products/{id} {
+      allow read: if isStaff();
+      allow create, update: if isManager();
+      allow delete: if isManager(); // cashiers cannot delete products
+    }
+
+    match /categories/{id} {
+      allow read: if isStaff();
+      allow write: if isManager();
+    }
+
+    match /brands/{id} {
+      allow read: if isStaff();
+      allow write: if isManager();
+    }
+
+    // ---------- Inventory ----------
+    match /inventory/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();       // sales decrement stock via inventory log
+      allow update, delete: if isManager();
+    }
+
+    // ---------- Sales ----------
+    match /sales/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update: if isManager();     // refunds / exchanges
+      allow delete: if isAdmin();
+    }
+
+    match /saleItems/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if isManager();
+    }
+
+    match /heldBills/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /returns/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if isManager();
+    }
+
+    match /payments/{id} {
+      allow read: if isManager();
+      allow create: if isStaff();
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- People ----------
+    match /customers/{id} {
+      allow read, create, update: if isStaff();
+      allow delete: if isManager();
+    }
+
+    match /suppliers/{id} {
+      allow read: if isManager();
+      allow write: if isManager();
+    }
+
+    match /employees/{id} {
+      allow read: if isManager();
+      allow write: if isAdmin();
+    }
+
+    // ---------- Finance ----------
+    match /expenses/{id} {
+      allow read: if isManager();
+      allow create, update: if isManager();
+      allow delete: if isAdmin();
+    }
+
+    match /discounts/{id} {
+      allow read: if isStaff();          // cashiers need coupon lookup
+      allow write: if isManager();
+    }
+
+    // ---------- System ----------
+    match /notifications/{id} {
+      allow read, create, update: if isStaff();
+      allow delete: if isManager();
+    }
+
+    match /activityLogs/{id} {
+      allow read: if isManager();
+      allow create: if isStaff();
+      allow update, delete: if false;    // audit trail is immutable
+    }
+
+    match /settings/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    match /roles/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    match /permissions/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    match /reports/{id} {
+      allow read: if isManager();
+      allow create: if isManager();
+      allow update, delete: if isAdmin();
+    }
+
+    match /backupHistory/{id} {
+      allow read: if isAdmin();
+      allow write: if false;             // written only by the server (Admin SDK)
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(cd C:\\\\Users\\\\PMLS\\\\Desktop\\\\POS\\\\client; npm install --no-audit --no-fund 2>$null; echo \"CLIENT_INSTALL_EXIT=$LASTEXITCODE\")",
+      "PowerShell(cd C:\\\\Users\\\\PMLS\\\\Desktop\\\\POS\\\\server; npm install --no-audit --no-fund 2>$null; echo \"SERVER_INSTALL_EXIT=$LASTEXITCODE\")"
+    ]
+  }
+}
