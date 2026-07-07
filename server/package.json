@@ -5,10 +5,11 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "seed": "node src/scripts/runSeed.js"
-  },
+  "build": "echo no build needed",
+  "start": "node src/index.js",
+  "dev": "node --watch src/index.js",
+  "seed": "node src/scripts/runSeed.js"
+},
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
